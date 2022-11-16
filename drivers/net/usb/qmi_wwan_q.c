@@ -79,8 +79,8 @@ module_param( qmap_mode, uint, S_IRUGO);
 module_param_named( rx_qmap, qmap_mode, uint, S_IRUGO );
 #endif
 
-#ifdef CONFIG_BRIDGE
-//#define QUECTEL_BRIDGE_MODE
+#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE) 
+#define QUECTEL_BRIDGE_MODE
 #endif
 
 #ifdef QUECTEL_BRIDGE_MODE
@@ -96,6 +96,7 @@ typedef struct sQmiWwanQmap
 	struct net_device *mpQmapNetDev[QUECTEL_WWAN_QMAP];
 	uint link_state;
 	uint qmap_mode;
+	uint qmap_size;
 #ifdef QUECTEL_BRIDGE_MODE
 	uint bridge_mode;
 	uint bridge_ipv4;
@@ -215,6 +216,17 @@ static ssize_t qmap_mode_show(struct device *dev, struct device_attribute *attr,
 
 static DEVICE_ATTR(qmap_mode, S_IRUGO, qmap_mode_show, NULL);
 
+static ssize_t qmap_size_show(struct device *dev, struct device_attribute *attr, char *buf) {
+	struct net_device *netdev = to_net_dev(dev);
+	struct usbnet * usbnetdev = netdev_priv( netdev );
+	struct qmi_wwan_state *info = (void *)&usbnetdev->data;
+	sQmiWwanQmap *pQmapDev = (sQmiWwanQmap *)info->unused;
+
+	return snprintf(buf, PAGE_SIZE, "%u\n",  pQmapDev->qmap_size);
+}
+
+static DEVICE_ATTR(qmap_size, S_IRUGO, qmap_size_show, NULL);
+
 static ssize_t link_state_show(struct device *dev, struct device_attribute *attr, char *buf) {
 	struct net_device *netdev = to_net_dev(dev);
 	struct usbnet * usbnetdev = netdev_priv( netdev );
@@ -318,6 +330,7 @@ static DEVICE_ATTR(bridge_ipv4, S_IWUSR | S_IRUGO, bridge_ipv4_show, bridge_ipv4
 static struct attribute *qmi_wwan_sysfs_attrs[] = {
 	&dev_attr_link_state.attr,
 	&dev_attr_qmap_mode.attr,
+	&dev_attr_qmap_size.attr,
 #ifdef QUECTEL_BRIDGE_MODE
 	&dev_attr_bridge_mode.attr,
 	&dev_attr_bridge_ipv4.attr,
@@ -582,6 +595,7 @@ static int qmi_wwan_rx_fixup(struct usbnet *dev, struct sk_buff *skb)
 #ifdef QUECTEL_BRIDGE_MODE	
 	if (pQmapDev->bridge_mode) {
 		memcpy(eth_hdr(skb)->h_dest, pQmapDev->bridge_mac, ETH_ALEN);
+		return 1;
 	}
 #endif
 
@@ -1036,13 +1050,16 @@ next_desc:
 			}
 
 			if (pQmapDev->qmap_mode) {
-				if (idProduct == 0x0121 || idProduct == 0x0125 || idProduct == 0x0435 || idProduct == 0x6005) //MDM9x07
+				if (idProduct == 0x0121 || idProduct == 0x0125 || idProduct == 0x0435) //MDM9x07
 					dev->rx_urb_size = 4*1024;
+				else if (idProduct == 0x0800)  //if set as 32K, x55 will rx error pkt
+					dev->rx_urb_size = 16*1024;
 				else if (lte_a || dev->udev->speed == USB_SPEED_SUPER)
 					dev->rx_urb_size = 32*1024;
 				else
 					dev->rx_urb_size = 32*1024;
 
+				pQmapDev->qmap_size = dev->rx_urb_size;
 				//for these modules, if send pakcet before qmi_start_network, or cause host PC crash, or cause modules crash
 				if (lte_a || dev->udev->speed == USB_SPEED_SUPER)
 					pQmapDev->link_state = 0;
@@ -1181,7 +1198,6 @@ static const struct usb_device_id products[] = {
 	{ QMI_FIXED_INTF(0x05C6, 0x9003, 4) },  /* Quectel UC20 */
 	{ QMI_FIXED_INTF(0x05C6, 0x9215, 4) },  /* Quectel EC20 (MDM9215) */
 	{ QMI_FIXED_RAWIP_INTF(0x2C7C, 0x0125, 4) },  /* Quectel EC20 (MDM9X07)/EC25/EG25 */
-	{ QMI_FIXED_RAWIP_INTF(0x2C7C, 0x6005, 4) },  /* Quectel EC20 (MDM9X07)/EC25/EG25 */
 	{ QMI_FIXED_RAWIP_INTF(0x2C7C, 0x0121, 4) },  /* Quectel EC21 */
 	{ QMI_FIXED_RAWIP_INTF(0x2C7C, 0x0191, 4) },  /* Quectel EG91 */
 	{ QMI_FIXED_RAWIP_INTF(0x2C7C, 0x0195, 4) },  /* Quectel EG95 */
@@ -1291,5 +1307,5 @@ module_usb_driver(qmi_wwan_driver);
 MODULE_AUTHOR("Bjørn Mork <bjorn@mork.no>");
 MODULE_DESCRIPTION("Qualcomm MSM Interface (QMI) WWAN driver");
 MODULE_LICENSE("GPL");
-#define QUECTEL_WWAN_VERSION "Quectel_Linux&Android_QMI_WWAN_Driver_V1.1"
+#define QUECTEL_WWAN_VERSION "Quectel_Linux&Android_QMI_WWAN_Driver_V1.1.2"
 MODULE_VERSION(QUECTEL_WWAN_VERSION);

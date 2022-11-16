@@ -72,7 +72,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 // Version Information
 //add new module or new feature, increase major version. fix bug, increase minor version
-#define DRIVER_VERSION "Quectel_Linux&Android_GobiNet_Driver_V1.6"
+#define DRIVER_VERSION "Quectel_Linux&Android_GobiNet_Driver_V1.6.1"
 #define DRIVER_AUTHOR "Qualcomm Innovation Center"
 #define DRIVER_DESC "GobiNet"
 
@@ -391,6 +391,20 @@ static ssize_t qmap_mode_show(struct device *dev, struct device_attribute *attr,
     return snprintf(buf, PAGE_SIZE, "%d\n", pGobiDev->m_qmap_mode);
 }
 
+#if 1 
+static DEVICE_ATTR(qmap_mode, S_IRUGO, qmap_mode_show, NULL);
+
+static ssize_t qmap_size_show(struct device *dev, struct device_attribute *attr, char *buf) {
+    struct net_device *pNet = to_net_dev(dev);
+    struct usbnet * pDev = netdev_priv( pNet );
+    sGobiUSBNet * pGobiDev = (sGobiUSBNet *)pDev->data[0];
+
+    return snprintf(buf, PAGE_SIZE, "%d\n", pGobiDev->qmap_size);
+}
+
+static DEVICE_ATTR(qmap_size, S_IRUGO, qmap_size_show, NULL);
+#else
+
 static ssize_t qmap_mode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) {
     struct net_device *pNet = to_net_dev(dev);
     struct usbnet * pDev = netdev_priv( pNet );
@@ -449,6 +463,7 @@ static ssize_t qmap_mode_store(struct device *dev, struct device_attribute *attr
 }
 
 static DEVICE_ATTR(qmap_mode, S_IWUSR | S_IRUGO, qmap_mode_show, qmap_mode_store);
+#endif
 
 static ssize_t link_state_show(struct device *dev, struct device_attribute *attr, char *buf) {
 	struct net_device *pNet = to_net_dev(dev);
@@ -492,6 +507,7 @@ static struct attribute *gobinet_sysfs_attrs[] = {
 #endif
 #ifdef QUECTEL_WWAN_QMAP
 	&dev_attr_qmap_mode.attr,
+	&dev_attr_qmap_size.attr,
 	&dev_attr_link_state.attr,
 #endif
 	NULL,
@@ -2010,7 +2026,6 @@ static const struct usb_device_id QuecGobiVIDPIDTable [] =
     GOBI_FIXED_INTF( 0x05c6, 0x9215 ), // Quectel EC20 (MDM9215)
     GOBI_FIXED_INTF( 0x2c7c, 0x0125 ), // Quectel EC20 (MDM9X07)/EC25/EG25
     GOBI_FIXED_INTF( 0x2c7c, 0x0121 ), // Quectel EC21
-    GOBI_FIXED_INTF( 0x2c7c, 0x6005 ), // Quectel EC21
     GOBI_FIXED_INTF( 0x2c7c, 0x0306 ), // Quectel EP06
     GOBI_FIXED_INTF( 0x2c7c, 0x0435 ), // Quectel AG35
     GOBI_FIXED_INTF( 0x2c7c, 0x0296 ), // Quectel BG96

@@ -385,6 +385,7 @@ typedef struct sGobiUSBNet
 #ifdef QUECTEL_WWAN_QMAP
    unsigned link_state;
    int m_qmap_mode;
+   int qmap_size;
    struct net_device	*mpQmapNetDev[QUECTEL_WWAN_QMAP];
 #ifdef CONFIG_BRIDGE
    int m_qmap_bridge_mode[QUECTEL_WWAN_QMAP];

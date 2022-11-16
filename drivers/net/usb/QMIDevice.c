@@ -3095,13 +3095,12 @@ static int qmi_sync_thread(void *data) {
 #if defined(QUECTEL_WWAN_QMAP)
 if (pDev->m_qmap_mode) {
    // Setup Data Format
-   int rx_urb_size = 0;
-   result = QMIWDASetDataFormat (pDev, pDev->m_qmap_mode, &rx_urb_size);
+   result = QMIWDASetDataFormat (pDev, pDev->m_qmap_mode, &pDev->qmap_size);
    if (result != 0)
    {
       goto __qmi_sync_finished;
    }
-   pDev->mpNetDev->rx_urb_size = rx_urb_size;
+   pDev->mpNetDev->rx_urb_size = pDev->qmap_size;
 }
 #endif
 
@@ -4116,6 +4115,7 @@ static int QMIWDASetDataFormat( sGobiUSBNet * pDev, int qmap_mode, int *rx_urb_s
    void * pReadBuffer;
    u16 readBufferSize;
    u16 WDAClientID;
+   u16 idProduct = le16_to_cpu(pDev->mpNetDev->udev->descriptor.idProduct);
 
    DBG("\n");
 
@@ -4142,7 +4142,7 @@ static int QMIWDASetDataFormat( sGobiUSBNet * pDev, int qmap_mode, int *rx_urb_s
 
    result = QMIWDASetDataFormatReq( pWriteBuffer,
                               writeBufferSize, pDev->mbRawIPMode,
-                              qmap_mode, 32*1024, //SDX24&SDX55 support 32KB
+                              qmap_mode, (idProduct == 0x0800) ? (16*1024) : (32*1024), //SDX24&SDX55 support 32KB //if set as 32K, x55 will rx error pkt
                               1 );
    
    if (result < 0)
